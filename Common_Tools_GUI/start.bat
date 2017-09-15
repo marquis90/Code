@@ -1,0 +1,1 @@
+@python common_tools_gui.py %* @pause
