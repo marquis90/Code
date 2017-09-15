@@ -1,0 +1,222 @@
+Sub 导入文本文档()
+'
+' 导入文本文档，并整理成两列数据
+'
+
+    With Application.FileDialog(msoFileDialogFilePicker)
+            .Title = "选择成交数据文本文档"
+            If .Show = -1 Then
+            dayDataFile = .SelectedItems(1)
+               'FileDialog 对象的 Show 方法显示对话框，并且返回 -1（如果您按 OK）和 0（如果您按 Cancel）。
+            Else
+            Exit Sub
+            End If
+    End With
+
+'On Error GoTo err111
+    Application.ScreenUpdating = False
+    Workbooks.OpenText Filename:= _
+        dayDataFile, Origin:=936, StartRow:= _
+        1, DataType:=xlDelimited, TextQualifier:=xlDoubleQuote, _
+        ConsecutiveDelimiter:=True, Tab:=True, Semicolon:=False, Comma:=False, _
+        Space:=True, Other:=False, FieldInfo:=Array(1, 1), TrailingMinusNumbers _
+        :=True
+'    Application.Run "成交记录整理"
+
+    Application.Run "'" & ThisWorkbook.Name & "'" & "!成交记录整理.成交记录整理"
+'   Application.Run ThisWorkbook.Path & "\" & ThisWorkbook.Name & "!成交记录整理.成交记录整理"
+
+    Application.ScreenUpdating = True
+
+err111:
+End Sub
+
+
+Sub 成交记录整理()
+    Application.ScreenUpdating = False
+    Dim Rng As Range, kkk As Range, n As Long, i As Long
+    Set Rng = ActiveSheet.Cells.SpecialCells(Type:=xlCellTypeConstants)
+    
+    Dim s$, reg1 As Object, reg2 As Object ',reg3 As Object
+    Set reg1 = CreateObject("vbscript.regexp")
+    Set reg2 = CreateObject("vbscript.regexp")
+    'Set reg3 = CreateObject("vbscript.regexp")
+    
+    reg1.Pattern = "^\d.*[dDmMyY]$|^\d{2}[\u4e00-\u9fa5A-Z].*$|^[ABC].*\w$"     #以整数.啥啥啥后接DDMMYY  或者
+    reg1.Global = True
+    reg2.Pattern = "^[A-Z].*|[\u4e00-\u9fa5a-z()：:（）+]+"
+    reg2.Global = True
+    
+    For Each kkk In Rng
+        s = kkk.Value
+        s = reg1.Replace(s, "")
+        kkk.Value = reg2.Replace(s, "")
+        
+    Next
+    
+    Set myreg = Nothing
+    
+    '移除百分号
+    Cells.Replace What:="%", Replacement:="", LookAt:=xlPart, SearchOrder:= _
+    xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+    
+    ActiveSheet.Cells.NumberFormatLocal = "G/通用格式"
+    
+    '删除空格
+        Selection.SpecialCells(xlCellTypeBlanks).Select
+        Selection.Delete Shift:=xlToLeft
+        
+    '分列并删除空行
+    n = ActiveSheet.Cells.SpecialCells(xlCellTypeLastCell).Row
+    
+    For i = n To 1 Step -1
+    Cells(i, 1).Select
+        If Selection <> "" Then
+            Selection.TextToColumns Destination:=Cells(i, 1), DataType:=xlDelimited, _
+                    TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=True, Tab:=False, _
+                    Semicolon:=False, Comma:=False, Space:=True, Other:=False, FieldInfo _
+                    :=Array(1, 1), TrailingMinusNumbers:=True
+        Else
+            Selection.EntireRow.Delete
+        End If
+    Next
+    '分列结束
+    
+    Application.ScreenUpdating = True
+
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+Sub 作图()
+Dim arr(1000)
+Dim i, j, k As Integer: Dim RowsCount As Integer: Dim Count1 As Integer
+Application.DisplayAlerts = False
+On Error Resume Next
+If MsgBox("是否自动选取成交最多", vbYesNo, "提示") = vbYes Then
+    Call 统计次数 '打开文件语句
+    End If
+
+For k = 1 To 4
+    Cells(22 * k - 17, 2) = Cells(1, k + 2) & "成交走势图"
+    Cells(22 * k - 16, 2) = "时间"
+    Cells(22 * k - 15, 2) = "最大值"
+    Cells(22 * k - 14, 2) = "最小值"
+    Cells(22 * k - 13, 2) = "平均值"
+    Cells(22 * k - 12, 2) = "成交笔数"
+    Cells(22 * k - 16, 3) = ActiveSheet.Next.Next.Next.Next.Next.Next.Name
+    Cells(22 * k - 16, 4) = ActiveSheet.Next.Next.Next.Next.Next.Name
+    Cells(22 * k - 16, 5) = ActiveSheet.Next.Next.Next.Next.Name
+    Cells(22 * k - 16, 6) = ActiveSheet.Next.Next.Next.Name
+    Cells(22 * k - 16, 7) = ActiveSheet.Next.Next.Name
+Next
+For k = 1 To 4
+
+    Sheets("有公式").Select
+    For j = 1 To 5
+        Erase arr
+        Count1 = 0
+        ActiveSheet.Next.Select
+        RowsCount = ActiveSheet.UsedRange.Rows.Count
+        For i = 2 To RowsCount
+            If Cells(i, 1) = Sheets("作图 ").Cells(1, k + 2) Then
+               Count1 = Count1 + 1
+               arr(Count1) = Cells(i, 2)
+            End If
+        Next
+        Sheets("作图 ").Cells(22 * k - 15, 8 - j) = WorksheetFunction.Max(arr)
+        Sheets("作图 ").Cells(22 * k - 14, 8 - j) = WorksheetFunction.Min(arr)
+        Sheets("作图 ").Cells(22 * k - 13, 8 - j) = WorksheetFunction.Average(arr)
+        Sheets("作图 ").Cells(22 * k - 12, 8 - j) = Count1
+    Next
+Next
+Sheets("作图 ").Select
+Application.DisplayAlerts = True
+End Sub
+
+Sub 统计次数()
+Dim Rng As Range
+Sheets.Add after:=ActiveSheet
+ActiveSheet.Name = "统计次数"
+    ActiveSheet.Next.Select
+For k = 1 To 5
+    ActiveSheet.Next.Select
+    
+    RowsCount = ActiveSheet.UsedRange.Rows.Count
+    For i = 2 To RowsCount
+        Sheets("统计次数").Cells(i, k) = ActiveSheet.Cells(i, 1)
+    Next
+Next
+Sheets("统计次数").Select
+Cells(2, 7) = "=MODE(A:E)"
+Cells(2, 7).Copy
+Cells(2, 8).Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+
+For k = 2 To 4
+    With [A:E]
+         .Replace Cells(k, 8), ""
+    End With
+    Cells(2, 7).Copy
+    Cells(k + 1, 8).Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+Next
+For k = 1 To 4
+    Sheets("作图 ").Cells(1, k + 2) = ActiveSheet.Cells(k + 1, 8)
+Next
+ActiveSheet.Delete
+Sheets("作图 ").Select
+End Sub
+
+
+
+
+
+
+
+
+
+
+Sub 粘出数据()
+'
+' 宏1 宏
+'
+Dim shtname$
+shtname = Format([A2], "m-d")
+    Columns("B:P").Select
+    Selection.Copy
+    Sheets.Add(after:=ThisWorkbook.ActiveSheet).Name = shtname
+
+    Sheets(shtname).Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    
+    Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+
+
+    Application.CutCopyMode = False
+    
+    Rows("1:1").AutoFilter
+            
+End Sub
+
+'Sub test()
+'
+'    Sheets.Add(After:=ThisWorkbook.ActiveSheet).Name = "test"
+'
+'
+'
+'End Sub
+
