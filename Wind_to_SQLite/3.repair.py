@@ -152,15 +152,3 @@ if miss_dates:
 else:
     print("Nothing further needs to be done !")
     
-
-
-
-
-
-
-
-
-
-
-    
-    
